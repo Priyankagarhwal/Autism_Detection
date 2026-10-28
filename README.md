@@ -1,61 +1,86 @@
-# Autism_Detection
-Autism Detection Prototype Using EEG Features and M-CHAT
-A research prototype that combines EEG-derived features and M-CHAT behavioral questionnaire responses to explore autism spectrum disorder (ASD) classification. The notebook implements a multimodal deep-learning architecture with graph-based EEG feature processing, attention-based fusion, fold-specific synthetic data augmentation, and Leave-One-Subject-Out (LOSO) evaluation.
-Important: This is an experimental research prototype, not a medical device or diagnostic tool. It must not be used to diagnose ASD or make clinical decisions. The dataset contains only 28 real children, so all performance estimates are preliminary and highly uncertain.
+# Autism Detection Using EEG and M-CHAT
 
-Overview
-The project explores whether EEG statistical features and behavioral questionnaire responses can be combined to distinguish ASD and control classes.
+## 📌 Project Overview
 
-The notebook:
-- Loads EEG-derived features and M-CHAT responses for 28 real children.
-- Represents eight EEG channels using three statistical features per channel.
-- Builds an EEG-channel graph for each child.
-- Uses a GNN and attention-based Transformer layers to learn and fuse multimodal representations.
-- Generates synthetic training examples using only the training portion of each LOSO fold.
-- Evaluates predictions on real, held-out children.
-- Compares the deep-learning model with classical machine-learning baselines.
-- Trains an ensemble of final models and saves model weights and scalers.
-Model Architecture
-The main model is EEGNetGNNFTTransformer.
-1. EEG feature projection: Each of the 8 EEG channels has 3 features: coefficient of variation, entropy, and skewness. A linear projection maps channel features into a 32-dimensional representation.
-2. Graph neural network: Two graph-convolution layers aggregate information across the eight EEG channels using an adjacency matrix derived from correlations between channel feature vectors.
-3. M-CHAT feature tokenization: The 23 questionnaire answers are converted into 32-dimensional tokens.
-4. Cross-attention fusion: EEG graph representations attend to M-CHAT tokens, combining information from both modalities.
-5. Self-attention: Attention is applied across the fused EEG-channel representations.
-6. Pooling and classification: Mean pooling and a feed-forward classifier produce a logit, which is converted to an ASD-class probability during prediction.
-High-level pipeline
-EEG statistical features (8 channels × 3 features)
-                  │
-          EEG feature projection
-                  │
-       Graph convolution × 2  ◄── EEG channel adjacency graph
-                  │
-                  ├───────────────┐
-                  │               │
-                  │        M-CHAT answers (23)
-                  │               │
-                  │        Feature tokenizer
-                  │               │
-                  └── Cross-attention fusion
-                                  │
-                              Self-attention
-                                  │
-                              Mean pooling
-                                  │
-                           Binary classifier
-                                  │
-                         ASD-class probability
-Dataset and Input Features
-The notebook expects the dataset archive A_Multi-Modal_Dataset_of_EEG_Signals_and_M-CHAT_As.zip (or an already extracted dataset folder).
+This project explores autism spectrum disorder (ASD) classification using EEG-derived statistical features and M-CHAT behavioral questionnaire responses. It combines Graph Neural Networks (GNNs), attention-based Transformer layers, and synthetic data augmentation to investigate multimodal learning.
 
-It searches for the Extracted Features directory and reads the following feature files:
-- Coefficient Of Variation.csv
-- Entropy.csv
-- Skewness.csv
-It also loads:
-- ASD-M-CHAT.csv
-- CTRL-M-CHAT.csv
-The expected folder structure includes:
+The project uses Leave-One-Subject-Out (LOSO) cross-validation to evaluate model predictions on held-out participants.
+
+**Note:** This is an experimental research prototype, not a medical diagnostic tool.
+
+## 🎯 Objectives
+
+- Analyze EEG features for autism-related classification.
+- Combine EEG signals' statistical features with M-CHAT questionnaire responses.
+- Develop a multimodal deep-learning architecture.
+- Explore synthetic data augmentation for model training.
+- Evaluate performance using subject-wise cross-validation.
+- Compare deep learning with traditional machine-learning models.
+
+## 🧠 Model Architecture
+
+The main model, `EEGNetGNNFTTransformer`, combines EEG and behavioral data.
+
+1. **EEG Feature Extraction:** Uses coefficient of variation, entropy, and skewness from eight EEG channels.
+2. **Graph Neural Network (GNN):** Learns relationships between EEG channels using an adjacency graph.
+3. **M-CHAT Feature Processing:** Converts 23 questionnaire responses into feature representations.
+4. **Cross-Attention Fusion:** Combines EEG and behavioral information.
+5. **Self-Attention:** Learns relationships among EEG channel representations.
+6. **Classification Layer:** Produces a prediction score for the ASD class.
+
+### Architecture Diagram
+
+```text
+EEG Features (8 Channels × 3 Features)
+                  |
+          Feature Projection
+                  |
+          Graph Neural Network
+                  |
+           EEG Representation
+                  |
+                  +------------------+
+                  |                  |
+                  |            M-CHAT Responses
+                  |                  |
+                  |            Feature Tokenizer
+                  |                  |
+                  +---- Cross-Attention
+                           Fusion
+                             |
+                       Self-Attention
+                             |
+                        Mean Pooling
+                             |
+                     Classification Layer
+                             |
+                       Prediction Score
+```
+
+## 📊 Dataset
+
+The notebook uses a multimodal dataset containing EEG-derived features and M-CHAT questionnaire responses.
+
+### EEG Features
+
+- Coefficient of Variation
+- Entropy
+- Skewness
+
+### Behavioral Features
+
+- 23 M-CHAT questionnaire responses
+
+### Dataset Size
+
+- 28 real children in the current pipeline.
+- Eight EEG channels.
+- Three statistical features per EEG channel.
+- 23 M-CHAT responses per participant.
+
+### Expected Dataset Structure
+
+```text
 dataset/
 ├── Extracted Features/
 │   ├── Coefficient Of Variation.csv
@@ -68,99 +93,146 @@ dataset/
     └── Raw Control Data/
         └── Behavioral Data/
             └── CTRL-M-CHAT.csv
-The notebook matches participants across EEG features and questionnaire data. It uses 28 real children in the current pipeline.
-Input	Shape per child	Description
-EEG features	8 × 3	Eight channels; coefficient of variation, entropy, and skewness
-M-CHAT responses	23	Responses to 23 questionnaire items
-Target	1	Class label: 1 = ASD, 0 = Control
+```
 
+The notebook expects the dataset archive `A_Multi-Modal_Dataset_of_EEG_Signals_and_M-CHAT_As.zip`, or an extracted dataset folder containing the required files.
 
-The archive's exact directory layout may vary; the notebook's dataset-discovery logic should be checked if the files are organized differently.
-Synthetic Data Augmentation
-Synthetic examples are generated separately inside each training fold:
-- Two real training children from the same class are selected as parents.
-- Their EEG features are blended and small random noise is added.
-- Each synthetic M-CHAT answer is copied from one of the two parents, preserving binary responses.
-- The synthetic example keeps the parents' class label.
-- The held-out child is not used to create synthetic examples.
-The notebook creates five synthetic examples per real training child (N_SYNTH_PER_REAL = 5). The EEG scaler is fitted using only the real training children in each fold.
+## 🔬 Synthetic Data Augmentation
 
-Synthetic examples are derived from a very small dataset and are not equivalent to collecting additional real participants. Their usefulness must be established through rigorous validation.
-Evaluation Strategy
-The notebook uses Leave-One-Subject-Out (LOSO) cross-validation:
-1. Hold out one real child for testing.
-2. Use the other 27 real children for training.
-3. Fit preprocessing on the real training subset.
-4. Generate synthetic data using only that fold's training children.
-5. Train the model and predict the held-out real child.
-6. Repeat until each real child has been held out.
-The deep model is repeated across 10 seeds (SEEDS = list(range(10)) and the notebook reports metrics including:
+The project generates synthetic training samples from real participants to explore the effect of data augmentation.
+
+- Two real training participants from the same class are selected.
+- Their EEG features are blended with small random noise.
+- M-CHAT responses are sampled from the corresponding parent responses.
+- Synthetic samples retain their parents' class label.
+- Synthetic data is generated separately within each training fold.
+
+The notebook creates five synthetic samples per real training participant.
+
+Synthetic samples do not replace real participants, and their effectiveness requires further validation.
+
+## 🧪 Model Evaluation
+
+The project uses **Leave-One-Subject-Out (LOSO) Cross-Validation**.
+
+### Evaluation Process
+
+1. One real participant is held out for testing.
+2. The remaining participants are used for training.
+3. Preprocessing is fitted using the training participants.
+4. Synthetic samples are generated from training data only.
+5. The model predicts the held-out participant.
+6. The process repeats until every real participant has been held out.
+
+The deep-learning model is evaluated across multiple random seeds.
+
+### Evaluation Metrics
+
 - Accuracy
 - ROC-AUC
-- Sensitivity (recall for the ASD class)
+- Sensitivity
 - Specificity
 - Mean and standard deviation across seeds
-The notebook also compares classical models—including Logistic Regression, RBF SVM, k-Nearest Neighbours, Random Forest, Extra Trees, Gradient Boosting, and XGBoost when installed—under the same LOSO framework, with real-only and real-plus-synthetic training conditions.
 
-Interpretation caution: With only 28 children, one child's prediction changes overall accuracy by about 3.6 percentage points. Results should be treated as preliminary internal validation, not evidence of clinical readiness. The notebook itself notes that a permutation test has not yet been confirmed. Repeated seeds do not increase the number of independent participants.
-Requirements
-The notebook uses Python and the following main packages:
+### Baseline Models
+
+The notebook also compares traditional machine-learning approaches:
+
+- Logistic Regression
+- Support Vector Machine (RBF kernel)
+- K-Nearest Neighbours
+- Random Forest
+- Extra Trees
+- Gradient Boosting
+- XGBoost (when available)
+
+## 🛠️ Technologies Used
+
+- Python
+- PyTorch
 - NumPy
 - pandas
+- scikit-learn
 - Matplotlib
 - seaborn
-- scikit-learn
-- PyTorch
 - joblib
-- XGBoost (for the XGBoost baseline; optional if unavailable)
-The first setup cell installs seaborn, matplotlib, scikit-learn, and joblib; the comparison section attempts to install xgboost.
-How to Run
-Option 1: Google Colab
-1. Upload Autism_synthetic_pipeline.ipynb to Google Colab.
-2. Upload the dataset ZIP when prompted, or place it in the notebook's working directory.
-3. Run the notebook cells in order, from environment setup through final model training.
-4. Review the LOSO evaluation and baseline comparison outputs.
-5. Check the saved_models/ directory for saved model weights and scalers.
-Option 2: Local Jupyter environment
-1. Install Python and Jupyter Notebook/Lab.
-2. Install the required dependencies.
-3. Place the dataset ZIP in the working directory, or extract it so the notebook can locate Extracted Features.
-4. Open the notebook and run the cells in order.
-The notebook may require small adjustments for local execution because its dataset-upload fallback uses Google Colab's files.upload() when running in Colab.
-Outputs
-The notebook is designed to produce:
-- LOSO evaluation metrics for the deep-learning model.
-- A comparison table and chart for classical baselines.
-- model_comparison.csv containing baseline comparison results.
-- A saved_models/ directory containing five model checkpoints and five EEG scalers:
-  - asd_model_seed0.pth through asd_model_seed4.pth
-  - eeg_scaler_seed0.joblib through eeg_scaler_seed4.joblib
-The final prediction function, predict_new_child(eeg_features_8x3, mchat_23), returns a mean score and the standard deviation across five models. This score is an experimental model output, not a calibrated clinical risk estimate. The notebook's demonstration uses a child already included in training and should not be interpreted as an independent test result.
-Reproducibility Notes
-- A fixed global seed (SEED = 42) is set during setup.
-- Training and evaluation use multiple seeds.
-- The model selects CUDA when available and otherwise uses CPU.
-- Results can vary with package versions, hardware, and nondeterministic GPU operations.
-- Keep the original dataset's documentation and usage terms with the data.
-Limitations and Future Work
-- Very small sample size: only 28 real children are included in the current pipeline.
-- Synthetic data may not reflect the variability of real-world participants.
-- Results need independent external validation on a substantially larger and more diverse cohort.
-- Statistical uncertainty and potential class imbalance should be reported clearly.
-- A permutation test and additional robustness checks are needed before making stronger performance claims.
-- Clinical use would require appropriate clinical validation, regulatory review, privacy safeguards, and expert oversight.
-Potential next steps include testing on an independent cohort, reporting confidence intervals, running permutation tests, checking calibration, documenting the dataset source and consent/privacy conditions, and comparing against simpler baselines without synthetic augmentation.
-Repository Structure
-.
+- XGBoost (optional)
+
+## 🚀 How to Run the Project
+
+### Option 1: Google Colab
+
+1. Upload `Autism_synthetic_pipeline.ipynb` to Google Colab.
+2. Upload the required dataset ZIP when prompted, or place it in the working directory.
+3. Execute the notebook cells in order.
+4. Review the model evaluation and baseline comparison results.
+5. Check the generated output files.
+
+### Option 2: Jupyter Notebook
+
+1. Install Python and Jupyter Notebook.
+2. Install the required Python packages.
+3. Place the dataset ZIP or extracted dataset in the expected location.
+4. Open `Autism_synthetic_pipeline.ipynb`.
+5. Run the cells sequentially.
+
+Some dataset-upload code may require adjustment when running outside Google Colab.
+
+## 📁 Project Structure
+
+```text
+Autism-Detection/
 ├── Autism_synthetic_pipeline.ipynb
 ├── README.md
-├── model_comparison.csv        # generated after running the notebook
-└── saved_models/               # generated after final model training
+├── model_comparison.csv
+└── saved_models/
     ├── asd_model_seed0.pth
-    ├── ...
-    └── eeg_scaler_seed4.joblib
-Generated outputs will appear only after the relevant notebook cells have been run.
-Disclaimer
-This repository is intended for educational and research exploration only. It does not provide medical advice, does not diagnose autism, and should not be used to screen or make decisions about any individual. Any real-world application would require validation by qualified clinical researchers and professionals.
-License
-Add a license before distributing or reusing this repository. Ensure you have permission to share the dataset and comply with its original license, consent, and privacy requirements.
+    ├── asd_model_seed1.pth
+    ├── asd_model_seed2.pth
+    ├── asd_model_seed3.pth
+    ├── asd_model_seed4.pth
+    └── eeg_scaler_seed0.joblib
+```
+
+The CSV file and saved model artifacts are generated after running the relevant notebook cells. The scaler directory also contains the remaining saved scalers.
+
+## 💾 Model Outputs
+
+The notebook generates:
+
+- LOSO evaluation results.
+- Baseline model comparison results.
+- `model_comparison.csv`.
+- Trained model checkpoints.
+- EEG feature scalers.
+- Prediction scores and model-ensemble statistics.
+
+The function `predict_new_child(eeg_features_8x3, mchat_23)` produces an experimental score and variation across five saved models.
+
+This output is not a clinically validated probability or diagnosis.
+
+## ⚠️ Limitations
+
+- The current pipeline contains only 28 real participants.
+- Synthetic data may not represent real-world participant variability.
+- Performance estimates are uncertain because of the small sample size.
+- Independent external validation is required.
+- Further statistical testing and robustness checks are needed.
+- Clinical use would require rigorous validation and appropriate expert oversight.
+
+## 🔮 Future Improvements
+
+- Evaluate the model on a larger, independent dataset.
+- Add confidence intervals and statistical significance testing.
+- Perform permutation tests and additional robustness checks.
+- Evaluate probability calibration.
+- Compare performance with and without synthetic augmentation.
+- Improve reproducibility and document dataset permissions.
+
+## ⚕️ Disclaimer
+
+This project is intended for educational and research purposes only. It is not intended to diagnose autism, provide medical advice, or replace professional clinical assessment. Do not use its predictions to make medical or screening decisions about individuals.
+
+## 📄 License
+
+Add an appropriate license before distributing or reusing this project. Ensure that the dataset's original license, consent requirements, privacy restrictions, and usage conditions are respected.
